@@ -12,6 +12,7 @@
 #include <sqlite3.h>
 #include "pulse.h"
 #include <TFT_eSPI.h>
+#include "graph.h"
 const int graphWidth = 250;
 const int graphHeight = 100;
 const int startPos[2] = {18, 222}; //0 - X, 1 - Y
@@ -49,6 +50,7 @@ float pulseTempData = 0;
 float oxyTempData = 0;
 float tempTempData = 0;
 const char *data = "Callback function called";
+Graph g_spo2(graphWidth, graphHeight, 1, 11, 3, 8, 8, "", ILI9341_YELLOW);
 
 static int callback(void *data, int argc, char **argv, char **azColName)
 {
@@ -102,7 +104,8 @@ void writeToSD()
   plik.println("palec wykryty");
   plik.close();
 }
-void graphWrite()
+/* NOTE: moved to separate class */
+/* void graphWrite()
 {
   tft.setCursor(10, 132);
   tft.fillRect(10, 132, graphWidth, graphHeight, ILI9341_YELLOW);
@@ -117,8 +120,9 @@ void graphWrite()
       currPos += 20;
     }
   }
-}
-void writeOnGraph(int _value)
+} */
+/* NOTE: moved to sepatate class */
+/* void writeOnGraph(int _value)
 {
   if (currXPos != startPos[0] + 201)
   {
@@ -133,10 +137,10 @@ void writeOnGraph(int _value)
   }
   else
   {
-    graphWrite();
+    g_spo2.clear(tft);
     currXPos = startPos[0] + 1;
   }
-}
+} */
 //measurement screen with three windows
 void measScreen()
 {
@@ -255,7 +259,7 @@ void dataCollect()
     {
       tempBool = true;
       measScreen();
-      graphWrite();
+      g_spo2.draw(tft, ILI9341_BLACK, 10, 132);
       currXPos = startPos[0] + 1;
       beatAvg = 0;
       oxyAvg = 0;
@@ -302,10 +306,13 @@ void dataCollect()
 
       writeOnMeasScreen(2, beatAvg);
       writeOnMeasScreen(1, oxyAvg);
-      writeOnGraph(oxyAvg);
+      if(g_spo2.lastPos > graphWidth-8) {
+        g_spo2.clear(tft);
+      }
+      g_spo2.dataDraw(tft, oxyAvg, ILI9341_BLUE);
       //FIXME: assign this to second core since it slows down whole rest
       String query = "INSERT INTO oneShot(pulse, spo2, temp, pres) VALUES(" + (String)beatAvg + ", " + (String)oxyAvg + ", " + (String)temp + ", " + (String)pres + ");";
-      [[maybe_unused]] int rc = db_exec(db, query.c_str());
+      //[[maybe_unused]] int rc = db_exec(db, query.c_str());
       //screenshot, doesn't work but doesn't matter
       /* uint8_t data[58000];
       tft.readRectRGB(1, 1, 160, 120, data);
